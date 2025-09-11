@@ -53,14 +53,6 @@ try {
       result:{}
     })
   }
-  //   if (!price) {
-  //   return res.send({
-  //     statusCode:400,
-  //     success:false,
-  //     message:"Price is required",
-  //     result:{}
-  //   })
-  // }
      if (!shippingAddress) {
     return res.send({
       statusCode:400,
@@ -172,7 +164,7 @@ const transactionId = generateTransactionId("TXN");
     totalAmount:payableAmount,
     shippingAddress,
     paymentMethod,
-    paymentStatus,
+    paymentStatus: paymentMethod==="Cash On Delivery"?"Pending":paymentStatus,
     // deliveredAt:Date.now()
     transactionId,
   })
@@ -182,7 +174,7 @@ const transactionId = generateTransactionId("TXN");
 
    verientCheck.stock -= quantity;
   await verientCheck.save();
-  
+
   return res.send({
     statusCode:200,
     success:true,
