@@ -89,60 +89,60 @@ exports.removeItem = async (req, res) => {
 };
 
 // Get cart (with populated products & prices)
-exports.getCart = async (req, res) => {
-  try {
-    const userId = req.token._id;
+// exports.getCart = async (req, res) => {
+//   try {
+//     const userId = req.token._id;
 
-    const cart = await Cart.findOne({ user: userId })
-      .populate({
-        path: "items.product",
-        select: "name images"
-      })
-      .populate({
-        path: "items.variant",
-        select: "color size price originalPrice"
-      })
-      .lean();
+//     const cart = await Cart.findOne({ user: userId })
+//       .populate({
+//         path: "items.product",
+//         select: "name images"
+//       })
+//       .populate({
+//         path: "items.variant",
+//         select: "color size price originalPrice"
+//       })
+//       .lean();
 
-    if (!cart) {
-      return res.send({
-        statusCode: 200,
-        success: true,
-        message: "Cart is empty",
-        result: { items: [] }
-      });
-    }
+//     if (!cart) {
+//       return res.send({
+//         statusCode: 200,
+//         success: true,
+//         message: "Cart is empty",
+//         result: { items: [] }
+//       });
+//     }
 
-    // Calculate totals
-    let totalPrice = 0;
-    let totalDiscount = 0;
+//     // Calculate totals
+//     let totalPrice = 0;
+//     let totalDiscount = 0;
 
-    cart.items.forEach(item => {
-      const price = item.variant?.price || item.product?.price || 0;
-      const originalPrice = item.variant?.originalPrice || item.product?.originalPrice || price;
-      totalPrice += price * item.quantity;
-      totalDiscount += (originalPrice - price) * item.quantity;
-    });
+//     cart.items.forEach(item => {
+//       const price = item.variant?.price || item.product?.price || 0;
+//       const originalPrice = item.variant?.originalPrice || item.product?.originalPrice || price;
+//       totalPrice += price * item.quantity;
+//       totalDiscount += (originalPrice - price) * item.quantity;
+//     });
 
-    res.send({
-      statusCode: 200,
-      success: true,
-      message: "Cart fetched successfully",
-      result: {
-        ...cart,
-        totalPrice,
-        totalDiscount
-      }
-    });
-  } catch (error) {
-    res.send({
-      statusCode: 500,
-      success: false,
-      message: error.message,
-      result: {}
-    });
-  }
-};
+//     res.send({
+//       statusCode: 200,
+//       success: true,
+//       message: "Cart fetched successfully",
+//       result: {
+//         ...cart,
+//         totalPrice,
+//         totalDiscount
+//       }
+//     });
+//   } catch (error) {
+//     res.send({
+//       statusCode: 500,
+//       success: false,
+//       message: error.message,
+//       result: {}
+//     });
+//   }
+// };
 
 exports.getCart = async (req, res) => {
   try {
