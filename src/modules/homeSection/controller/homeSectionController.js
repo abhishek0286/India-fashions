@@ -188,6 +188,7 @@ exports.getHomepage = async (req, res) => {
         product.wishlisted = wishlistProductIds.includes(String(product._id));
       }
     }
+console.log("ssection",sections);
 
     return res.send({
       statusCode: 200,
