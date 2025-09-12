@@ -2,16 +2,30 @@
 const Cart = require("../model/cartModel");
 
 // Add/Update item in cart
+
 exports.addOrUpdateItem = async (req, res) => {
   try {
-        console.log("body", req.body)
-          console.log("token", req.token._id)
+    console.log("body", req.body)
+    console.log("token", req.token._id)
+    
     let { productId, variantId, quantity } = req.body;
+    quantity = parseInt(quantity);
     const userId = req.token._id;
+    
     console.log("productId", productId)
     console.log("variantId", variantId)
     console.log("quantity", quantity)
     console.log("userId", userId)
+
+    // Input validation
+    if (!productId) {
+      return res.send({
+        statusCode: 400,
+        success: false,
+        message: "Product ID is required",
+        result: {}
+      });
+    }
 
     let cart = await Cart.findOne({ user: userId });
 
@@ -19,20 +33,35 @@ exports.addOrUpdateItem = async (req, res) => {
       cart = new Cart({ user: userId, items: [] });
     }
 
-    const existingItem = cart.items.find(
-      item =>
-        item.product.toString() === productId &&
-        (variantId ? item.variant?.toString() === variantId : !item.variant)
-    );
+    const existingItem = cart.items.find(item => {
+      // Safe comparison with null checks
+      const productMatch = item.product && item.product.toString() === productId;
+      
+      if (variantId) {
+        // If variantId is provided, check if variant exists and matches
+        return productMatch && item.variant && item.variant.toString() === variantId;
+      } else {
+        // If no variantId provided, find item with no variant or empty variant
+        return productMatch && (!item.variant || item.variant === "");
+      }
+    });
 
     if (existingItem) {
+      // Update quantity if item exists
       existingItem.quantity = quantity || existingItem.quantity + 1;
     } else {
-      cart.items.push({
+      // Add new item to cart
+      const newItem = {
         product: productId,
-        variant: variantId || "",
         quantity: quantity || 1
-      });
+      };
+      
+      // Only add variant if it's provided
+      if (variantId) {
+        newItem.variant = variantId;
+      }
+      
+      cart.items.push(newItem);
     }
 
     await cart.save();
@@ -44,6 +73,7 @@ exports.addOrUpdateItem = async (req, res) => {
       result: cart
     });
   } catch (error) {
+    console.error("Cart API Error:", error);
     res.send({
       statusCode: 500,
       success: false,
@@ -53,7 +83,60 @@ exports.addOrUpdateItem = async (req, res) => {
   }
 };
 
+// exports.addOrUpdateItem = async (req, res) => {
+//   try {
+//         console.log("body", req.body)
+//           console.log("token", req.token._id)
+//     let { productId, variantId, quantity } = req.body;
+//     quantity = parseInt(quantity);
+//     const userId = req.token._id;
+//     console.log("productId", productId)
+//     console.log("variantId", variantId)
+//     console.log("quantity", quantity)
+//     console.log("userId", userId)
+
+//     let cart = await Cart.findOne({ user: userId });
+
+//     if (!cart) {
+//       cart = new Cart({ user: userId, items: [] });
+//     }
+
+//     const existingItem = cart.items.find(
+//       item =>
+//         item.product.toString() === productId &&
+//         (variantId ? item.variant?.toString() === variantId : !item.variant)
+//     );
+
+//     if (existingItem) {
+//       existingItem.quantity = quantity || existingItem.quantity + 1;
+//     } else {
+//       cart.items.push({
+//         product: productId,
+//         variant: variantId || "",
+//         quantity: quantity || 1
+//       });
+//     }
+
+//     await cart.save();
+
+//     res.send({
+//       statusCode: 200,
+//       success: true,
+//       message: "Item added/updated in cart",
+//       result: cart
+//     });
+//   } catch (error) {
+//     res.send({
+//       statusCode: 500,
+//       success: false,
+//       message: error.message,
+//       result: {}
+//     });
+//   }
+// };
+
 // Remove item
+
 exports.removeItem = async (req, res) => {
   try {
     const { productId, variantId } = req.body;
