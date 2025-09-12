@@ -4,6 +4,7 @@ const Category = require("../../productCategory/model/categoryModel");
 const User = require("../../user/model/userModel");
 const Variant = require("../../variant/model/variantModel");
 const Order = require("../model/orderModel");
+const { success } = require("../../../utils/ResponseHandler");
 
 
 function generateTransactionId(prefix = "TXN") {
@@ -203,60 +204,112 @@ else{
 }
 }
 
-exports.getMyOrders = async (req, res) => {
+// exports.getMyOrders = async (req, res) => {
+//   try {
+//     const userId = req.token._id; // from verifyJWT
+//     const { page = 1, limit = 10, search = "" } = req.query;
+
+//     const skip = (parseInt(page) - 1) * parseInt(limit);
+
+//     const filter = { user: userId };
+//     if (search) {
+//       filter.$or = [
+//         { orderId: { $regex: search, $options: "i" } },
+//         { status: { $regex: search, $options: "i" } },
+//       ];
+//     }
+
+//     const totalOrders = await Order.countDocuments(filter);
+
+//     const orders = await Order.find(filter)
+//       .select("orderId status totalAmount createdAt items")
+//       .sort({ createdAt: -1 })
+//       .skip(skip)
+//       .limit(parseInt(limit))
+//       .lean();
+
+//     // Format response
+//     const formattedOrders = orders.map((order) => ({
+//       _id: order._id,
+//       orderId: order.orderId,
+//       status: order.status,
+//       totalAmount: order.totalAmount,
+//       itemsCount: order.items.length,
+//       createdAt: order.createdAt,
+//     }));
+
+//     return res.send({
+//       statusCode: 200,
+//       success: true,
+//       message: "Orders fetched successfully",
+//       result: {
+//         data: formattedOrders,
+//         totalPages: Math.ceil(totalOrders / parseInt(limit)),
+//         totalRecords: totalOrders,
+//         currentPage: parseInt(page),
+//       },
+//     });
+//   } catch (error) {
+//     return res.send({
+//       statusCode: 500,
+//       success: false,
+//       message: error.message || "Server error",
+//       result: {},
+//     });
+//   }
+// };
+
+
+exports.getMyOrders = async (req,res) =>{
+
   try {
-    const userId = req.token._id; // from verifyJWT
-    const { page = 1, limit = 10, search = "" } = req.query;
+    let token = req.token
+    let {page=1, limit=10,search=""}=req.query
+    page=Number.parseInt(page)
+    limit = Number.parseInt(limit)
+    let skip = (page - 1) * limit;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    const filter = { user: userId };
-    if (search) {
-      filter.$or = [
-        { orderId: { $regex: search, $options: "i" } },
-        { status: { $regex: search, $options: "i" } },
-      ];
+    let user = await User.findOne({_id:token._id,status:"Active"})
+    if (!user) {
+      return res.send({
+        statusCode:404,
+        success:false,
+        message:"Unauthorized acccess",
+        result:{}
+      })
     }
-
-    const totalOrders = await Order.countDocuments(filter);
-
-    const orders = await Order.find(filter)
-      .select("orderId status totalAmount createdAt items")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .lean();
-
-    // Format response
-    const formattedOrders = orders.map((order) => ({
-      _id: order._id,
-      orderId: order.orderId,
-      status: order.status,
-      totalAmount: order.totalAmount,
-      itemsCount: order.items.length,
-      createdAt: order.createdAt,
-    }));
-
+    let allOrder = await Order.find({user:user._id}).skip(skip).limit(limit).populate({path:"items.product",select:"name images price originalPrice"}).populate({path:"items.variant",select:"color size price originalPrice"}).populate({path:"items.categoryId",select:"image name slug"})
+    if(!allOrder){
+      return res.send({
+        statusCode:404,
+        success:false,
+        message:"Opss! No Order list found",
+        result:{}
+      })
+    }
+   let totalOrder = await Order.countDocuments();
     return res.send({
       statusCode: 200,
       success: true,
-      message: "Orders fetched successfully",
+      message: "All Order fetch successfully",
       result: {
-        data: formattedOrders,
-        totalPages: Math.ceil(totalOrders / parseInt(limit)),
-        totalRecords: totalOrders,
-        currentPage: parseInt(page),
+        Orders: allOrder,
+        currentPage: page,
+        totalPage: Math.ceil(totalOrder / limit),
+        totalRecord: totalOrder,
       },
     });
   } catch (error) {
+    console.log("Error!!",error);
+    
     return res.send({
-      statusCode: 500,
-      success: false,
-      message: error.message || "Server error",
-      result: {},
-    });
+      statusCode:500,
+      success:false,
+      message:error.message||"Internal server error",
+      result:{}
+    })
   }
-};
+}
 
 exports.getOrderDetail = async (req, res) => {
   try {
@@ -386,6 +439,133 @@ exports.returnOrder = async (req, res) => {
       statusCode: 500,
       success: false,
       message: error.message || "Server error",
+      result: {},
+    });
+  }
+};
+
+exports.getPendingDeliveredData = async (req, res) => {
+  try {
+    let token = req.token;
+    let { tabId } = req.params;
+    // let { page = 1, limit = 10 } = req.query;
+
+    // page = Number.parseInt(page);
+    // limit = Number.parseInt(limit);
+    // let skip = (page - 1) * limit;
+   tabId = Number.parseInt(tabId)
+    
+
+    let user = await User.findOne({ _id: token._id, status: "Active" });
+    if (!user) {
+      return res.send({
+        statusCode: 404,
+        success: false,
+        message: "Unauthorized access",
+        result: {},
+      });
+    }
+
+    // ✅ build filter
+    // let statusFilter = {};
+    // if (tabId == 1) {
+    //   statusFilter = { status: "Pending" };
+    // } else if (tabId == 2) {
+    //   statusFilter = { status: "Delivered" };
+    // }
+
+    // // ✅ fetch orders
+    // let allOrder = await Order.find({ user: user._id, ...statusFilter })
+    //   .skip(skip)
+    //   .limit(limit)
+    //   .populate({ path: "items.product", select: "name images price originalPrice" })
+    //   .populate({ path: "items.variant", select: "color size price originalPrice" })
+    //   .populate({ path: "items.categoryId", select: "image name slug" });
+
+    // if (!allOrder || allOrder.length === 0) {
+    //   return res.send({
+    //     statusCode: 404,
+    //     success: false,
+    //     message: "Oops! No Order list found",
+    //     result: {},
+    //   });
+    // }
+
+    // // ✅ total count (with same filter)
+    // let totalOrder = await Order.countDocuments({ user: user._id, ...statusFilter });
+
+    // return res.send({
+    //   statusCode: 200,
+    //   success: true,
+    //   message: tabId == 1 ? "Pending orders fetched" : "Delivered orders fetched",
+    //   result: {
+    //     Orders: allOrder,
+    //     currentPage: page,
+    //     totalPage: Math.ceil(totalOrder / limit),
+    //     totalRecord: totalOrder,
+    //   },
+    // });
+if (tabId == 1) {
+  let allOrder = await Order.find({ user: user._id, status:"Pending" })
+      // .skip(skip)
+      // .limit(limit)
+      .populate({ path: "items.product", select: "name images price originalPrice" })
+      .populate({ path: "items.variant", select: "color size price originalPrice" })
+      .populate({ path: "items.categoryId", select: "image name slug" });
+
+      console.log("penidnfjnj",allOrder);
+      
+   
+      if (!allOrder || allOrder.length === 0) {
+      return res.send({
+        statusCode: 404,
+        success: false,
+        message: "Oops! No Order list found",
+        result: {},
+      });
+    }
+    return res.send({
+      statusCode:200,
+      success:true,
+      message:"Pending order fetch successfully",
+      result:{
+        allOrder
+      }
+    })
+}
+
+if (tabId == 2) {
+  let allOrder = await Order.find({ user: user._id, status:"Delivered" })
+      // .skip(skip)
+      // .limit(limit)
+      .populate({ path: "items.product", select: "name images price originalPrice" })
+      .populate({ path: "items.variant", select: "color size price originalPrice" })
+      .populate({ path: "items.categoryId", select: "image name slug" });
+   
+      if (!allOrder || allOrder.length === 0) {
+      return res.send({
+        statusCode: 404,
+        success: false,
+        message: "Oops! No Order list found",
+        result: {},
+      });
+    }
+    return res.send({
+      statusCode:200,
+      success:true,
+      message:"Delivered order fetch successfully",
+      result:{
+        allOrder
+      }
+    })
+}
+
+  } catch (error) {
+    console.log("Error!!", error);
+    return res.send({
+      statusCode: 500,
+      success: false,
+      message: error.message || "Internal server error",
       result: {},
     });
   }
