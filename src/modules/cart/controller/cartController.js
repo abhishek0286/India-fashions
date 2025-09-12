@@ -1,5 +1,6 @@
 // const { log } = require("handlebars/runtime");
 const Cart = require("../model/cartModel");
+const User = require("../../user/model/userModel")
 
 // Add/Update item in cart
 
@@ -239,6 +240,16 @@ exports.getCart = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
+    const user = await User.findOne({_id:userId,status:"Active"})
+    if (!user) {
+      return res.send({
+        statusCode:404,
+        success:false,
+        message:"Unauthorized user",
+        result:{}
+      })
+    }
+console.log("user",user)
     // Get user cart
     const cart = await Cart.findOne(query)
       .populate({
@@ -284,7 +295,12 @@ exports.getCart = async (req, res) => {
       message: "Cart fetched successfully",
       result: {
         _id: cart._id,
-        user: cart.user,
+       user: {
+            _id: user._id,
+            fullName: user.fullName,
+            email: user.email,
+            addresses: user.addresses || [],
+          },
         items: paginatedItems,
         totalRecords,
         totalPages,
