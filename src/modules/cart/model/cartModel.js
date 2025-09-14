@@ -7,6 +7,7 @@ const cartSchema = new mongoose.Schema(
       {
         product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", },
         variant: { type: mongoose.Schema.Types.ObjectId, ref: "Variant" }, // optional if no variants
+        categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category" },
         quantity: { type: Number, default: 1, min: 1 }
       }
     ],
