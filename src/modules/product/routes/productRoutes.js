@@ -10,11 +10,7 @@ productRouter.get("/list",verifyJWT.decodeToken, productController.getProducts);
 productRouter.post("/update/:productId", verifyJWT.decodeToken, upload.none(), productController.updateProduct);
 productRouter.post("/delete/:productId", verifyJWT.decodeToken, upload.none(), productController.deleteProduct);
 
-productRouter.get(
-  "/:productId",
-  verifyJWT.decodeToken, // allow both logged-in and guest users
-  productController.getProductDetail
-);
+productRouter.get("/:productId",verifyJWT.decodeToken,productController.getProductDetail);
 
 
 module.exports = productRouter;

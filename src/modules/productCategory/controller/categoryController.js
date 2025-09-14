@@ -26,7 +26,12 @@ exports.createCategory = async (req, res) => {
       });
     }
 
-    const category = await Category.create({ name, image: image || "", slug });
+    const createCategory = new Category({
+      name,
+      slug,
+      image
+    })
+    await createCategory.save()
     return res.send({
       statusCode: 200,
       success: true,
