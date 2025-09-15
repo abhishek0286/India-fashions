@@ -162,7 +162,7 @@ exports.getHomepage = async (req, res) => {
       .populate({
         path: "products",
         match: { status: "Active" },
-        select: "name images averageRating totalReviews",
+        select: "name images averageRating totalReviews categoryId",
       })
       .lean();
 
